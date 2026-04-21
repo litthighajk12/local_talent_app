@@ -1,23 +1,43 @@
 import 'package:flutter/material.dart';
-import '../../navigation_screen.dart'; // 🔥 IMPORTANT
+import '../../navigation_screen.dart'; 
 import 'register_screen.dart';
+// 🔥 ADD THIS IMPORT so the login screen knows where the admin dashboard is
+import '../admin/admin_dashboard.dart'; 
 
 class LoginScreen extends StatelessWidget {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  void login(BuildContext context) {
+  LoginScreen({super.key});
 
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+  void login(BuildContext context) {
+    // We use .trim() to remove accidental spaces at the end of the email/password
+    String email = emailController.text.trim();
+    String password = passwordController.text.trim();
+
+    // 1. Basic validation: Are fields empty?
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter email and password")),
+        const SnackBar(content: Text("Please enter email and password")),
       );
       return;
     }
 
+    // 2. 🔥 THE SECRET DOOR: Check for Admin Credentials
+    // This MUST come before the normal user navigation
+    if (email == "admin@gmail.com" && password == "admin123") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+      );
+      return; // 🔥 This stops the code so it doesn't run the User Login below
+    }
+
+    // 3. NORMAL USER LOGIN
+    // If it's not the admin, they go to the regular home/navigation screen
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => NavigationScreen()), // 🔥 UPDATED
+      MaterialPageRoute(builder: (_) => NavigationScreen()), 
     );
   }
 
@@ -25,8 +45,8 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.deepPurple, Colors.purpleAccent],
             begin: Alignment.topLeft,
@@ -41,13 +61,11 @@ class LoginScreen extends StatelessWidget {
               ),
               elevation: 10,
               child: Padding(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-
-                    // 🔥 APP NAME
-                    Text(
+                    const Text(
                       "Local Talent Showcase",
                       style: TextStyle(
                         fontSize: 22,
@@ -55,44 +73,39 @@ class LoginScreen extends StatelessWidget {
                         color: Colors.deepPurple,
                       ),
                     ),
-
-                    SizedBox(height: 10),
-
-                    Text(
+                    const SizedBox(height: 10),
+                    const Text(
                       "Welcome Back 👋",
                       style: TextStyle(fontSize: 18),
                     ),
+                    const SizedBox(height: 20),
 
-                    SizedBox(height: 20),
-
-                    // EMAIL
+                    // EMAIL FIELD
                     TextField(
                       controller: emailController,
                       decoration: InputDecoration(
                         labelText: "Email",
-                        prefixIcon: Icon(Icons.email),
+                        prefixIcon: const Icon(Icons.email),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 15),
 
-                    SizedBox(height: 15),
-
-                    // PASSWORD
+                    // PASSWORD FIELD
                     TextField(
                       controller: passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: "Password",
-                        prefixIcon: Icon(Icons.lock),
+                        prefixIcon: const Icon(Icons.lock),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
-
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
                     // LOGIN BUTTON
                     SizedBox(
@@ -100,20 +113,19 @@ class LoginScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () => login(context),
                         style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 15),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
                           backgroundColor: Colors.deepPurple,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: Text(
+                        child: const Text(
                           "Login",
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
                     ),
-
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
                     // REGISTER LINK
                     TextButton(
@@ -123,7 +135,7 @@ class LoginScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => RegisterScreen()),
                         );
                       },
-                      child: Text("Create Account"),
+                      child: const Text("Create Account"),
                     )
                   ],
                 ),
