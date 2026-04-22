@@ -1,84 +1,99 @@
 import 'package:flutter/material.dart';
-import '../../services/registration_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'map_screen.dart';
 
 class EventDetailsScreen extends StatelessWidget {
-  final Map event;
+  final Map<String, dynamic> event;
 
   EventDetailsScreen({required this.event});
 
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
+  final emailController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    // 🔥 SAFE DATA (NO CRASH)
+    String title = (event['title'] ?? "No Title").toString();
+    String imageUrl = (event['imageUrl'] ?? "").toString();
+    String date = (event['date'] ?? "").toString();
+    String time = (event['time'] ?? "").toString();
+    String location = (event['location'] ?? "").toString();
+    String description = (event['description'] ??
+            "Join this exciting event and showcase your talent.")
+        .toString();
+    String phone = (event['contactPhone'] ?? "").toString();
+    String email = (event['contactEmail'] ?? "").toString();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(event["title"]),
+        title: Text(title),
+        backgroundColor: Colors.blue,
       ),
+
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔥 EVENT IMAGE
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
-              child: Image.network(
-                event["image"],
-                height: 220,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
+
+            // 🔥 IMAGE
+            imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    height: 220,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    height: 220,
+                    color: Colors.grey[300],
+                    child: Center(child: Icon(Icons.image)),
+                  ),
 
             Padding(
               padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // TITLE
+
                   Text(
-                    event["title"],
+                    title,
                     style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                        fontSize: 22, fontWeight: FontWeight.bold),
                   ),
 
                   SizedBox(height: 10),
 
-                  // DATE
                   Row(
                     children: [
                       Icon(Icons.calendar_today, size: 16),
                       SizedBox(width: 8),
-                      Text(event["date"]),
+                      Text("$date • $time"),
                     ],
                   ),
 
                   SizedBox(height: 8),
 
-                  // LOCATION
                   Row(
                     children: [
                       Icon(Icons.location_on, size: 16),
                       SizedBox(width: 8),
-                      Text(event["location"]),
+                      Text(location),
                     ],
                   ),
 
                   SizedBox(height: 15),
 
-                  // MAP BUTTON
                   ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              MapScreen(location: event["location"]),
+                              MapScreen(location: location),
                         ),
                       );
                     },
@@ -88,30 +103,31 @@ class EventDetailsScreen extends StatelessWidget {
 
                   SizedBox(height: 20),
 
-                  // DESCRIPTION
                   Text(
                     "About Event",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-
                   SizedBox(height: 8),
+                  Text(description),
+
+                  SizedBox(height: 20),
 
                   Text(
-                    "Join this exciting event and showcase your talent. Participate, compete, and connect with others in your area!",
+                    "Contact",
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
+                  SizedBox(height: 8),
+                  Text("📞 $phone"),
+                  Text("📧 $email"),
 
                   SizedBox(height: 25),
 
-                  // REGISTRATION SECTION
                   Text(
                     "Register Now",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
 
                   SizedBox(height: 10),
@@ -139,25 +155,70 @@ class EventDetailsScreen extends StatelessWidget {
                     ),
                   ),
 
+                  SizedBox(height: 10),
+
+                  TextField(
+                    controller: emailController,
+                    decoration: InputDecoration(
+                      labelText: "Email",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+
                   SizedBox(height: 20),
 
-                  // REGISTER BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        RegistrationService.registerEvent(event);
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                      ),
+                      onPressed: () async {
+
+                        if (nameController.text.isEmpty ||
+                            phoneController.text.isEmpty ||
+                            emailController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Please fill all fields")),
+                          );
+                          return;
+                        }
+
+                        // 🔥 SAVE REGISTRATION
+                        await FirebaseFirestore.instance
+                            .collection('registrations')
+                            .add({
+                          'eventTitle': title,
+                          'name': nameController.text.trim(),
+                          'phone': phoneController.text.trim(),
+                          'email': emailController.text.trim(),
+                          'timestamp': Timestamp.now(),
+                        });
+
+                        // 🔔 ADD NOTIFICATION (NEW)
+                        await FirebaseFirestore.instance
+                            .collection('notifications')
+                            .add({
+                          "title": "Registration Successful ✅",
+                          "message": "You registered for $title",
+                          "type": "registration",
+                          "eventTitle": title,
+                          "timestamp": Timestamp.now(),
+                        });
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                                "🎉 Registered Successfully! Notification will be sent."),
+                            content: Text("🎉 Registered Successfully!"),
                           ),
                         );
+
+                        nameController.clear();
+                        phoneController.clear();
+                        emailController.clear();
                       },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                      ),
                       child: Text("Confirm Registration"),
                     ),
                   )

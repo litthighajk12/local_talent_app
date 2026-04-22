@@ -4,7 +4,9 @@ import 'features/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();   // 🔥 VERY IMPORTANT
+
+  // ✅ SAFE INITIALIZATION (recommended)
+  await Firebase.initializeApp();
 
   runApp(MyApp());
 }
@@ -37,7 +39,8 @@ class _MyAppState extends State<MyApp> {
 
       theme: ThemeData(
         brightness: Brightness.light,
-        primarySwatch: Colors.deepPurple,
+        primarySwatch: Colors.blue, // 🔥 changed to match your UI
+        scaffoldBackgroundColor: Colors.blue.shade50,
       ),
 
       darkTheme: ThemeData(

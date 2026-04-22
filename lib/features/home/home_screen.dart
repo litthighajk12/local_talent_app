@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../event/event_details_screen.dart';
 import '../profile/profile_screen.dart';
-import '../../main.dart';
 import '../notification/notification_screen.dart';
-import '../auth/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -14,118 +11,39 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List events = [
-    {
-      "title": "Dance Battle 2026",
-      "date": "April 2 • 5:00 PM",
-      "location": "Neyveli",
-      "lat": 11.6088,
-      "lng": 79.4766,
-      "image":
-          "https://images.unsplash.com/photo-1515169067868-5387ec356754"
-    },
-    {
-      "title": "Music Festival Live",
-      "date": "April 5 • 6:30 PM",
-      "location": "Chennai",
-      "lat": 13.0827,
-      "lng": 80.2707,
-      "image":
-          "https://images.unsplash.com/photo-1511379938547-c1f69419868d"
-    },
-    {
-      "title": "Art Workshop",
-      "date": "April 10 • 3:00 PM",
-      "location": "Pondicherry",
-      "lat": 11.9416,
-      "lng": 79.8083,
-      "image":
-          "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
-    },
-    {
-      "title": "Coding Hackathon",
-      "date": "April 12 • 9:00 AM",
-      "location": "Bangalore",
-      "lat": 12.9716,
-      "lng": 77.5946,
-      "image":
-          "https://images.unsplash.com/photo-1518770660439-4636190af475"
-    },
-    {
-      "title": "Photography Contest",
-      "date": "April 15 • 4:00 PM",
-      "location": "Coimbatore",
-      "lat": 11.0168,
-      "lng": 76.9558,
-      "image":
-          "https://images.unsplash.com/photo-1504208434309-cb69f4fe52b0"
-    },
-    {
-      "title": "Drama & Theatre Fest",
-      "date": "April 18 • 7:00 PM",
-      "location": "Madurai",
-      "lat": 9.9252,
-      "lng": 78.1198,
-      "image":
-          "https://images.unsplash.com/photo-1503095396549-807759245b35"
-    },
-    {
-      "title": "Startup Pitch Event",
-      "date": "April 20 • 2:00 PM",
-      "location": "Hyderabad",
-      "lat": 17.3850,
-      "lng": 78.4867,
-      "image":
-          "https://images.unsplash.com/photo-1552664730-d307ca884978"
-    },
-    {
-      "title": "Singing Competition",
-      "date": "April 25 • 6:00 PM",
-      "location": "Trichy",
-      "lat": 10.7905,
-      "lng": 78.7047,
-      "image":
-          "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91"
-    },
-  ];
-
-  List filteredEvents = [];
   TextEditingController searchController = TextEditingController();
+
+  String? lastNotificationId; // 🔔 NEW
 
   @override
   void initState() {
     super.initState();
-    filteredEvents = events;
-  }
 
-  void searchEvents(String query) async {
-    if (query.isEmpty) {
-      setState(() => filteredEvents = events);
-      return;
-    }
+    // 🔔 LISTEN FOR NEW NOTIFICATIONS
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
 
-    if (query.toLowerCase().contains("near")) {
-      Position position = await Geolocator.getCurrentPosition();
-      double userLat = position.latitude;
-      double userLng = position.longitude;
+      if (snapshot.docs.isNotEmpty) {
+        var latest = snapshot.docs.first;
 
-      List nearby = events.where((event) {
-        double distance = Geolocator.distanceBetween(
-          userLat,
-          userLng,
-          event["lat"],
-          event["lng"],
-        );
-        return distance < 500000;
-      }).toList();
+        if (lastNotificationId != latest.id) {
+          lastNotificationId = latest.id;
 
-      setState(() => filteredEvents = nearby);
-      return;
-    }
+          String title = latest['title'] ?? "";
+          String message = latest['message'] ?? "";
 
-    setState(() {
-      filteredEvents = events.where((event) =>
-          event["title"].toLowerCase().contains(query.toLowerCase())).toList();
+          // 🔔 SHOW POPUP
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("$title\n$message"),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     });
   }
 
@@ -134,33 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Explore Events"),
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => LoginScreen()),
-            );
-          },
-        ),
+        backgroundColor: Colors.blue,
         actions: [
-          IconButton(
-            icon: Icon(Icons.my_location),
-            onPressed: () => searchEvents("near me"),
-          ),
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: () {
-              setState(() {
-                filteredEvents = events;
-                searchController.clear();
-              });
+              searchController.clear();
+              setState(() {});
             },
-          ),
-          IconButton(
-            icon: Icon(Icons.brightness_6),
-            onPressed: () => MyApp.of(context)!.toggleTheme(),
           ),
           IconButton(
             icon: Icon(Icons.notifications),
@@ -175,34 +74,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
 
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.purple.shade200, Colors.pink.shade100],
-          ),
-        ),
+        color: Colors.blue.shade50,
         child: Column(
           children: [
-            SizedBox(height: 10),
 
-            // 🔥 Firebase Test Button
-            ElevatedButton(
-              onPressed: () async {
-                await FirebaseFirestore.instance.collection('test').add({
-                  "name": "Akila",
-                  "time": DateTime.now(),
-                });
-                print("Data added");
-              },
-              child: Text("Test Firebase"),
-            ),
-
+            // 🔍 SEARCH
             Padding(
               padding: EdgeInsets.all(10),
               child: TextField(
                 controller: searchController,
-                onChanged: searchEvents,
                 decoration: InputDecoration(
-                  hintText: "Search or type 'near me'",
+                  hintText: "Search events",
                   prefixIcon: Icon(Icons.search),
                   filled: true,
                   fillColor: Colors.white,
@@ -210,77 +92,148 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                onChanged: (value) => setState(() {}),
               ),
             ),
 
+            // 🔥 EVENTS LIST
             Expanded(
-              child: ListView.builder(
-                itemCount: filteredEvents.length,
-                itemBuilder: (context, index) {
-                  var event = filteredEvents[index];
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('events')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
 
-                  return Container(
-                    margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          blurRadius: 5,
-                          color: Colors.black12,
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius:
-                              BorderRadius.vertical(top: Radius.circular(15)),
-                          child: Image.network(
-                            event["image"],
-                            height: 160,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error loading events"));
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(child: Text("No events available"));
+                  }
+
+                  var events = snapshot.data!.docs;
+
+                  return ListView.builder(
+                    itemCount: events.length,
+                    itemBuilder: (context, index) {
+
+                      var doc = events[index];
+                      var event = doc.data() as Map<String, dynamic>;
+
+                      String title = (event['title'] ?? "No Title").toString();
+                      String type = (event['type'] ?? "General").toString();
+                      String date = (event['date'] ?? "").toString();
+                      String time = (event['time'] ?? "").toString();
+                      String location = (event['location'] ?? "").toString();
+                      String imageUrl = (event['imageUrl'] ?? "").toString();
+
+                      if (!title.toLowerCase().contains(
+                          searchController.text.toLowerCase())) {
+                        return SizedBox();
+                      }
+
+                      return Container(
+                        margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black12, blurRadius: 5)
+                          ],
                         ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
 
-                        Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                event["title"],
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: 5),
-                              Text(event["date"]),
-                              SizedBox(height: 5),
-                              Text("📍 ${event["location"]}"),
+                            ClipRRect(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(15)),
+                              child: imageUrl.isNotEmpty
+                                  ? Image.network(
+                                      imageUrl,
+                                      height: 160,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      height: 160,
+                                      color: Colors.grey[300],
+                                      child: Center(child: Icon(Icons.image)),
+                                    ),
+                            ),
 
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  child: Text("View Details"),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            EventDetailsScreen(event: event),
+                            Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          title,
+                                          style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                    );
-                                  },
-                                ),
-                              )
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade100,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          type,
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.blue.shade800),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 5),
+
+                                  Text("$date • $time"),
+
+                                  SizedBox(height: 5),
+
+                                  Text("📍 $location"),
+
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      child: Text("View Details"),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                EventDetailsScreen(event: event),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -291,11 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
+        selectedItemColor: Colors.blue,
         items: [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: "Profile"),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
         ],
         onTap: (index) {
           if (index == 1) {
